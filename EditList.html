@@ -1,0 +1,65 @@
+<html>
+<style>
+body {
+	background: #eee;
+	padding: 5px;
+	max-width: 40em;
+	margin: 0 auto;
+}
+
+.slip-swiping-container {
+	overflow-x: hidden;
+}
+
+.slippylist {
+    clear:left;
+    margin: 1em;
+	user-select: none;
+}
+
+table {
+	border-collapse: collapse;
+	width: 90%;
+	align: center;
+	user-select: none;
+}
+
+td {
+	user-select: none;
+	background: white;
+	padding: 1em;
+}
+
+tr {
+	user-select: none;
+	border: 1px solid black;
+	line-height: 2;
+}
+</style>
+<head>
+	<title>Einkaufsliste bearbeiten</title>
+	<script src="resources/listutil.js"></script>
+	<script src="resources/slip.js"></script>
+	<meta name="viewport" content="width=device-width">
+	<link rel="icon" href="/resources/einkaufskorb.ico" type="image/x-icon">
+</head>
+<body onload="onLoad()">
+	<div id="list">
+	</div>
+    <hr/>
+    <p>
+        Produkt <br/>
+		<small>auch mit Mengenangabe<br/>Menge und Einheit zusammenschreiben:<br/>500g statt 500 g</small>
+    </p>
+    <input id="product" type="text" list="food" width="40" />
+	<datalist id="food">
+		<option value="Brot"/>
+		<option value="Eier"/>
+		<option value="Wasser"/>
+		<option value="Wurst"/>
+		<option value="K&auml;se"/>
+	</datalist>
+    <input id="btnAdd" type="button" value="Brauchen wir!" onclick="addItem()" />
+
+</body>
+</html>
