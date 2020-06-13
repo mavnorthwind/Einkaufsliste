@@ -18,7 +18,6 @@ app.use(function (req, res, next) {
 var listPath = path.resolve(__dirname, 'liste.json');
 var suggestionPath = path.resolve(__dirname, 'suggestion.json');
 var list;
-var suggestion;
 
 // Initialisierung
 if (fs.existsSync(listPath))
@@ -31,13 +30,18 @@ else
 		DeleteTimestamp: 0
 		};
 
-if (fs.existsSync(suggestionPath))
-	suggestion = require(suggestionPath);
-else
-	suggestion = {
+function getSuggestion() {
+	delete require.cache[require.resolve(suggestionPath)];
+
+	var sug = {
 		Items: ["Brot","Käse","Wurst"]
 		};
 
+	if (fs.existsSync(suggestionPath))
+		sug = require(suggestionPath);
+	
+	return sug;
+}
 
 function addToList(newItem) {
 	if (newItem.Product == null)
@@ -195,7 +199,7 @@ app.get('/resources/:file', function(req, res){
 });
 
 app.get('/suggestion' , function(req, res){
-	res.end(JSON.stringify(suggestion));
+	res.end(JSON.stringify(getSuggestion()));
 });
 
 app.post('/', function (req, res) {
