@@ -78,6 +78,21 @@
 		}
 	}
 
+	function fillProductDatalist() {
+		var sel = document.getElementById('food');
+		sel.innerHTML = "";
+		
+		sendRequest('GET', "suggestion", null, (s) => {
+			var suggestions = JSON.parse(s);
+			var items = "";
+			suggestions.Items.forEach(function(element){
+				items += "<option value='" + element + "'/>\n";
+			});
+			sel.innerHTML = items;
+		});
+		
+	}
+	
 	function getProduct() {
 		var res = new Object();
 		res.Amount = undefined;
@@ -173,5 +188,6 @@
 		
 		sendRequest('GET', null, null, (r) => {
 			updateList(r);
+			fillProductDatalist();
 		});
 	}
