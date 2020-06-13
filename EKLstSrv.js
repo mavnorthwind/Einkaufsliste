@@ -67,6 +67,9 @@ function addToList(newItem) {
 		if (p2 > p1) return -1;
 		return 0;
 	});
+	
+	logItemAdd(newItem);
+	
 	console.log(newItem.Product + " added to list");
 };
 
@@ -79,6 +82,7 @@ function deleteByID(id) {
 			list.Items.splice(i, 1);
 			list.DeleteTimestamp = new Date().valueOf();
 			console.log("Product " + id + " removed from list");
+			logItemDelete(p);
 			return;
 		}
 	}
@@ -126,6 +130,28 @@ function sendFile(fileName, root, req, res){
 function writeList()
 {
 	fs.writeFileSync(listPath, JSON.stringify(list));
+}
+
+function makeSafeForCSV(val) {
+	if (val.indexOf(';') >= 0)
+		return "'" + val + "'";
+	else
+		return val;
+}
+function getProductLogPath() {
+	return path.resolve(__dirname, 'products.csv');
+}
+function formatItemForLog(item) {
+	var prod = makeSafeForCSV(item.Product);
+	
+	return prod + ';' + (item.Amount || "") + ';' + (item.Unit || "");
+}
+function logItemAdd(item) {
+	fs.appendFileSync(getProductLogPath(), new Date().toJSON() + ';ADD;' + formatItemForLog(item) + '\n');
+}
+
+function logItemDelete(item) {
+	fs.appendFileSync(getProductLogPath(), new Date().toJSON() + ';DEL;' + formatItemForLog(item) + '\n');
 }
 
 app.get('/', function (req, res) {
