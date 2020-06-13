@@ -1,35 +1,35 @@
-    function updateList(json)
-    {
-        var list = JSON.parse(json);
-        var div = document.getElementById('list');
-        var html = "<h2>" + list.Name + "</h2>";
-        html += "<table class='slippylist'><tr><th></th><th>Produkt</th><th>Menge</th></tr>";
+	function updateList(json) {
+		var list = JSON.parse(json);
+		var div = document.getElementById('list');
+		var html = "<h2>" + list.Name + "</h2>";
+		html += "<table class='slippylist' id='table' data-addTS='" + list.AddTimestamp + "' data-delTS='" + list.DeleteTimestamp + "'>";
+		html += "<thead><tr><th></th><th>Produkt</th><th>Menge</th></tr></thead>";
 		html += "<tbody id='tbody'>";
 		
-        for (var i = 0; i < list.Items.length; i++)
-        {
-            var amount = parseInt(list.Items[i].Amount, 10);
-            if (isNaN(amount))
-                amount = "&nbsp;";
-            else
-                amount = list.Items[i].Amount + " " + list.Items[i].Unit;
+		for (var i = 0; i < list.Items.length; i++)
+		{
+			var amount = parseInt(list.Items[i].Amount, 10);
+			if (isNaN(amount))
+				amount = "&nbsp;";
+			else
+				amount = list.Items[i].Amount + " " + list.Items[i].Unit;
 
-            html += "<tr>";
-            // empty cell for delete-icon
-            html += "<td></td>"; 
-            // product name
-            html += "<td>" + list.Items[i].Product + "</td>";
-            // product amount
-            html += "<td style='text-align:center;'>" + amount + "</td>";
-            //html += "<td><img src='resources/del.png' onclick='delItem(\""+list.Items[i].Product+"\")' /></td>";
-            // product ID in hidden cell
-            html += "<td style='display: none'>" + list.Items[i].ID + "</td>";
-            html += "</tr>\n";
-        }
-        html += "</tbody>";
+			html += "<tr>";
+			// empty cell for delete-icon
+			html += "<td></td>"; 
+			// product name
+			html += "<td>" + list.Items[i].Product + "</td>";
+			// product amount
+			html += "<td style='text-align:center;'>" + amount + "</td>";
+			//html += "<td><img src='resources/del.png' onclick='delItem(\""+list.Items[i].Product+"\")' /></td>";
+			// product ID in hidden cell
+			html += "<td style='display: none'>" + list.Items[i].ID + "</td>";
+			html += "</tr>\n";
+		}
+		html += "</tbody>";
 		html += "</table>";
 
-        div.innerHTML = html;
+		div.innerHTML = html;
 		var tbody = document.getElementById("tbody");
 		if (tbody) {
 			new Slip(tbody);
@@ -63,19 +63,26 @@
 				}
 
 				var row = e.target;
-				var id = e.target.firstChild.nextSibling.nextSibling.nextSibling.innerText.trim();
-				delItem(id, row, (r) => {
-					r.parentElement.removeChild(r);
+				var productID = e.target.firstChild.nextSibling.nextSibling.nextSibling.innerText.trim();
+				delItem(productID, row, (list) => {
+					// check if list has to be updated
+					var lastAddTimestamp = list.AddTimestamp;
+					var table = document.getElementById('table');
+					var currentAddTimestamp = table.getAttribute("data-addts");
+					if (currentAddTimestamp != lastAddTimestamp)
+						updateList(list);
+					else
+						row.parentElement.removeChild(row); // just removing is enough
 				});
 			});
 		}
-    }
+	}
 
-    function getProduct() {
-        var res = new Object();
+	function getProduct() {
+		var res = new Object();
 		res.Amount = undefined;
 
-        var prod = document.getElementById('product').value;
+		var prod = document.getElementById('product').value;
 		if (!prod || prod.trim().length == 0)
 			return null;
 
@@ -87,74 +94,74 @@
 		// 500g Nudeln
 		// Gemischtes Gulasch 1kg
 		var re = new RegExp("\\s+");
-        //var re = new RegExp("([0-9]+\\S*)");
+		//var re = new RegExp("([0-9]+\\S*)");
 		var reUnit = new RegExp("[0-9]+(\\S*)");
-        var parts = prod.split(re);
+		var parts = prod.split(re);
 		var product = "";
 		var hasUnit = false;
 
-        for (var i = 0; i < parts.length; i++) {
+		for (var i = 0; i < parts.length; i++) {
 			var amount = parseInt(parts[i], 10);
-            if (isNaN(amount) || hasUnit) {
+			if (isNaN(amount) || hasUnit) {
 				product += parts[i] + " ";
 			} else {
-                res.Amount = amount;
+				res.Amount = amount;
 
 				var unitMatch = parts[i].match(reUnit);
 				if (unitMatch[1] != '')
 					res.Unit = unitMatch[1];
 				
 				hasUnit = true;
-            }
-        }
+			}
+		}
 
-        res.Product = product.trim();
+		res.Product = product.trim();
 
-        return res;
-    }
+		return res;
+	}
 
-    function addItem() {
-        var item = getProduct();
-	if (item == null)
-		return;
+	function addItem() {
+		var item = getProduct();
+		if (item == null)
+			return;
 
-        sendRequest("POST", null, item, (r) => {
-		updateList(r);
-	});
-	document.getElementById("product").value = "";
-    }
+		sendRequest("POST", null, item, (r) => {
+			updateList(r);
+		});
+		document.getElementById("product").value = "";
+	}
 
-    function delItem(id, row, callback) {
-        sendRequest("DELETE", "product/"+id, null, (r) => {
-		if (callback)
-			callback(row);
-	});
-    }
+	function delItem(id, row, callback) {
+		sendRequest("DELETE", "product/"+id, null, callback);
+		// sendRequest("DELETE", "product/"+id, null, (r) => {
+			// if (callback)
+				// callback(row);
+		// });
+	}
 
-    function sendRequest(verb, path, body, onComplete) {
-        var http = new XMLHttpRequest();
-        var url = "http://"+window.location.hostname+":8081/";
+	function sendRequest(verb, path, body, onCompleteCallback) {
+		var http = new XMLHttpRequest();
+		var url = "http://"+window.location.hostname+":8081/";
 		if (path)
 			url += path;
 			
-        http.open(verb, url, true);
+		http.open(verb, url, true);
 
-        //Send the proper header information along with the request
-        http.setRequestHeader("Content-Type", "application/json");
-        http.onreadystatechange = function () {//Call a function when the state changes.
-            if (http.readyState == 4 && http.status == 200) {
-                console.log(http.responseText);
-		if (onComplete)
-			 onComplete(http.responseText);		
-//                updateList(http.responseText);
-            }
-        }
+		//Send the proper header information along with the request
+		http.setRequestHeader("Content-Type", "application/json");
+		http.onreadystatechange = function () {//Call a function when the state changes.
+			if (http.readyState == 4 && http.status == 200) {
+				console.log(http.responseText);
+				if (onCompleteCallback)
+					 onCompleteCallback(http.responseText);		
+			}
+		}
 		
 		if (body)
 			http.send(JSON.stringify(body));
 		else
 			http.send();
-    }
+	}
 	
 	function onLoad(){
 		document.getElementById("product").addEventListener("keyup", function(event) {
@@ -165,6 +172,6 @@
 		});
 		
 		sendRequest('GET', null, null, (r) => {
-						 updateList(r);
-		 });
+			updateList(r);
+		});
 	}

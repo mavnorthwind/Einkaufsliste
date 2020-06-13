@@ -9,10 +9,10 @@ var app = express();
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(function (req, res, next) {
-    res.header("Access-Control-Allow-Origin", "*");
-    res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
-    res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE");
-    next();
+	res.header("Access-Control-Allow-Origin", "*");
+	res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+	res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE");
+	next();
 });
 
 var listPath = path.resolve(__dirname, 'liste.json');
@@ -24,13 +24,17 @@ if (fs.existsSync(listPath))
 	list = require(listPath);
 else
 	list = {Name: 'Einkaufsliste',
-		Items: []};
+		Items: [],
+		AddTimestamp: 0,
+		DeleteTimestamp: 0};
 
 
 function addToList(newItem) {
 	if (newItem.Product == null)
 		return;
 
+	list.AddTimestamp = new Date().valueOf();
+	
 	newItem.Product = newItem.Product.trim();
 	var amount = parseInt(newItem.Amount);
 	if (isNaN(amount))
@@ -66,43 +70,37 @@ function addToList(newItem) {
 	console.log(newItem.Product + " added to list");
 };
 
-function deleteByIndex(index) {
-	if (index < list.Items.length) {
-		var item = list.Items[index];
-		list.Items.splice(index, 1);
-       	    	console.log(item.Product + " at index " + index + " removed from list");
-	} else {
-       	    	console.error("No such index: " + index);
-	}
-};
-
 function deleteByID(id) {
 	console.log("Trying to delete product with id '"+id+"'");
 	for (var i = 0; i < list.Items.length; i++) {
-       		var p = list.Items[i];
+		var p = list.Items[i];
 
 		if (id == p.ID) {
-       		     	list.Items.splice(i, 1);
-       	     		console.log("Product " + id + " removed from list");
-       		     	return;
-    		}
+			list.Items.splice(i, 1);
+			list.DeleteTimestamp = new Date().valueOf();
+			console.log("Product " + id + " removed from list");
+			return;
+		}
 	}
-       	console.warn("Product " + id + " not found in list");
+	console.warn("Product " + id + " not found in list");
 }
+
+function deleteByIndex(index) {
+	var item = list.Items[index];
+	deleteByID(item.ID);
+};
 
 function deleteByName(product) {
 	var prod = product.trim().toUpperCase();
-	console.log("Trying to delete product '"+prod+"'");
 	for (var i = 0; i < list.Items.length; i++) {
-       		var p = list.Items[i];
+		var p = list.Items[i];
 		var existing = p.Product.trim().toUpperCase();
-		console.log("compare to '"+existing+"'");
 		if (existing == prod) {
-       		     	list.Items.splice(i, 1);
-       		     	console.log(product + " removed from list");
-       		     	return;
-    		}
-    	}
+			deleteByID(p.ID);
+			return;
+		}
+	}
+
 	console.log(product + " not in list!");
 };
 
@@ -125,8 +123,13 @@ function sendFile(fileName, root, req, res){
 	});
 };
 
+function writeList()
+{
+	fs.writeFileSync(listPath, JSON.stringify(list));
+}
+
 app.get('/', function (req, res) {
-    res.end(JSON.stringify(list));
+	res.end(JSON.stringify(list));
 });
 
 app.get('/edit', function(req, res){
@@ -142,11 +145,11 @@ app.get('/edit', function(req, res){
 	
 	res.sendFile(fileName, options, function (err) {
 		if (err) {
-		  console.log(err);
-		  res.status(err.status).end();
+			console.log(err);
+			res.status(err.status).end();
 		}
 		else {
-		  console.log('Sent:' + fileName + " to " +req.ip);
+			console.log('Sent:' + fileName + " to " +req.ip);
 		}
 	});
 });
@@ -155,31 +158,12 @@ app.get('/resources/:file', function(req, res){
 	sendFile(req.params.file, '/resources/', req, res);
 });
 
-app.get('/list', function (req, res) {
-	var html = "<html><head><title>" + list.Name + "</title></head><body>";
-	html += "<table>";
-	html += "<tr><th>Produkt</th><th>Anzahl</th></tr>";
-	for (var i = 0; i < list.Items.length; i++)
-	{
-		var a = "&nbsp;";
-		var amount = parseInt(list.Items[i].Amount, 10);
-		if (!isNaN(amount))
-			a = amount + " " + list.Items[i].Unit;
-
-		html += "<tr><td>" + list.Items[i].Product + "</td><td>" + a + "</td></tr>";
-	}
-	html += "</table>";
-	html += "</body>";
-
-	res.end(html);
-});
-
 
 app.post('/', function (req, res) {
 	console.log("ADD PRODUCT: " + JSON.stringify(req.body));
 	product = req.body;
 	addToList(product);
-	fs.writeFileSync(listPath, JSON.stringify(list));
+	writeList();
 	res.end(JSON.stringify(list));
 });
 
@@ -188,7 +172,7 @@ app.delete('/index/:index', function (req, res) {
 	var index = req.params.index;
 	console.log("DELETE product by index: " + index);
 	deleteByIndex(index);
-	fs.writeFileSync(listPath, JSON.stringify(list));
+	writeList();
 	res.end(JSON.stringify(list));
 });
 
@@ -197,7 +181,7 @@ app.delete('/product/:id', function (req, res) {
 	var id = req.params.id;
 	console.log("DELETE product by id: " + id);
 	deleteByID(id);
-	fs.writeFileSync(listPath, JSON.stringify(list));
+	writeList();
 	res.end(JSON.stringify(list));
 });
 
@@ -206,7 +190,7 @@ app.delete('/product/name/:product', function (req, res) {
 	var product = decodeURIComponent(req.params.product);
 	console.log("DELETE product by name: " + product);
 	deleteByName(product);
-	fs.writeFileSync(listPath, JSON.stringify(list));
+	writeList();
 	res.end(JSON.stringify(list));
 });
 
