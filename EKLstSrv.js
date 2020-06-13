@@ -16,17 +16,27 @@ app.use(function (req, res, next) {
 });
 
 var listPath = path.resolve(__dirname, 'liste.json');
-
+var suggestionPath = path.resolve(__dirname, 'suggestion.json');
 var list;
+var suggestion;
 
 // Initialisierung
 if (fs.existsSync(listPath))
 	list = require(listPath);
 else
-	list = {Name: 'Einkaufsliste',
+	list = {
+		Name: 'Einkaufsliste',
 		Items: [],
 		AddTimestamp: 0,
-		DeleteTimestamp: 0};
+		DeleteTimestamp: 0
+		};
+
+if (fs.existsSync(suggestionPath))
+	suggestion = require(suggestionPath);
+else
+	suggestion = {
+		Items: ["Brot","Käse","Wurst"]
+		};
 
 
 function addToList(newItem) {
@@ -184,6 +194,9 @@ app.get('/resources/:file', function(req, res){
 	sendFile(req.params.file, '/resources/', req, res);
 });
 
+app.get('/suggestion' , function(req, res){
+	res.end(JSON.stringify(suggestion));
+});
 
 app.post('/', function (req, res) {
 	console.log("ADD PRODUCT: " + JSON.stringify(req.body));
