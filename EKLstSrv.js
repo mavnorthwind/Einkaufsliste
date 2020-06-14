@@ -3,7 +3,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const uuid = require('node-uuid');
 const path = require('path');
-const parse = require('csv-parse');
+const parse = require('csv-parser');
 
 var app = express();
 
