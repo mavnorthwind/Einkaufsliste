@@ -20,12 +20,11 @@ var list = getList();
 
 var suggestionPath = path.resolve(__dirname, 'suggestion.json');
 
-setInterval(updateSuggestion, 1000*60*60*24); // update suggestions once a day
+updateSuggestion(); // update once at startup
+setInterval(updateSuggestion, 1000*60*60*24); // and update suggestions once a day
 
 // Initialisierung
 function getList() {
-	delete require.cache[require.resolve(listPath)];
-
 	var list = {
 		Name: 'Einkaufsliste',
 		Items: [],
@@ -33,22 +32,21 @@ function getList() {
 		DeleteTimestamp: 0
 		};
 
-	if (fs.existsSync(listPath))
+	if (fs.existsSync(listPath)) {
+		delete require.cache[require.resolve(listPath)];
 		list = require(listPath);
+	}
 	
 	return list;
 }
 
-
 function getSuggestion() {
-	delete require.cache[require.resolve(suggestionPath)];
+	var sug = [];
 
-	var sug = {
-		Items: ["Brot","Käse","Wurst"]
-		};
-
-	if (fs.existsSync(suggestionPath))
+	if (fs.existsSync(suggestionPath)) {
+		delete require.cache[require.resolve(suggestionPath)];
 		sug = require(suggestionPath);
+	}
 	
 	return sug;
 }
@@ -58,18 +56,9 @@ function writeSuggestion(sug) {
 }
 
 function updateSuggestion() {
-	var sug = getSuggestion();
+	var sug = extractProductFrequency();
 	
-	sug.Items = [];
-	
-	var productFrequency = extractProductFrequency();
-	
-	for (f of productFrequency)
-	{
-		sug.Items.push(f.Name);
-	}
-	
-	writeSuggestion();
+	writeSuggestion(sug);
 }
 
 function extractProductFrequency() {

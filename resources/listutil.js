@@ -85,9 +85,9 @@
 		sendRequest('GET', "suggestion", null, (s) => {
 			var suggestions = JSON.parse(s);
 			var items = "";
-			suggestions.Items.forEach(function(element){
-				items += "<option value='" + element + "'/>\n";
-			});
+			for (s of suggestions) {
+				items += "<option value='" + s.Name + "'/>\n";
+			};
 			sel.innerHTML = items;
 		});
 		
