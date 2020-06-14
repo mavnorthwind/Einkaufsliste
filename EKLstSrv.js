@@ -16,19 +16,29 @@ app.use(function (req, res, next) {
 });
 
 var listPath = path.resolve(__dirname, 'liste.json');
+var list = getList();
+
 var suggestionPath = path.resolve(__dirname, 'suggestion.json');
-var list;
+
+setInterval(updateSuggestion, 1000*60*60*24); // update suggestions once a day
 
 // Initialisierung
-if (fs.existsSync(listPath))
-	list = require(listPath);
-else
-	list = {
+function getList() {
+	delete require.cache[require.resolve(listPath)];
+
+	var list = {
 		Name: 'Einkaufsliste',
 		Items: [],
 		AddTimestamp: 0,
 		DeleteTimestamp: 0
 		};
+
+	if (fs.existsSync(listPath))
+		list = require(listPath);
+	
+	return list;
+}
+
 
 function getSuggestion() {
 	delete require.cache[require.resolve(suggestionPath)];
@@ -41,6 +51,37 @@ function getSuggestion() {
 		sug = require(suggestionPath);
 	
 	return sug;
+}
+
+function writeSuggestion(sug) {
+	fs.writeFileSync(suggestionPath, JSON.stringify(sug));
+}
+
+function updateSuggestion() {
+	var sug = getSuggestion();
+	
+	sug.Items = [];
+	
+	var productFrequency = extractProductFrequency();
+	
+	for (f of productFrequency)
+	{
+		sug.Items.push(f.Name);
+	}
+	
+	writeSuggestion();
+}
+
+function extractProductFrequency() {
+	var frequency = [
+		{Name:"Brot",Frequency:20},
+		{Name:"Milch",Frequency:12},
+		{Name:"Käse",Frequency:10},
+		{Name:"Wurst",Frequency:10},
+		{Name:"Joghurt",Frequency:2},
+	];
+	
+	return frequency;
 }
 
 function addToList(newItem) {
