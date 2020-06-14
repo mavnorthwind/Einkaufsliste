@@ -20,7 +20,7 @@ var listPath = path.resolve(__dirname, 'liste.json');
 var list = getList();
 
 var suggestionPath = path.resolve(__dirname, 'suggestion.json');
-var productsPath = path.resolve(__dirname, 'products.csv');
+var productsPath = getProductLogPath();
 
 updateSuggestion(); // update once at startup
 setInterval(updateSuggestion, 1000*60*60*24); // and update suggestions once a day
@@ -58,21 +58,46 @@ function writeSuggestion(sug) {
 }
 
 function updateSuggestion() {
-	var sug = extractProductFrequency();
-	
-	writeSuggestion(sug);
+	extractProductFrequency(f => writeSuggestion(f));
 }
 
-function extractProductFrequency() {
-	var frequency = [
-		{Name:"Brot",Frequency:20},
-		{Name:"Milch",Frequency:12},
-		{Name:"Käse",Frequency:10},
-		{Name:"Wurst",Frequency:10},
-		{Name:"Joghurt",Frequency:2},
-	];
+function buildHistogram(data) {
+	var histo = [];
 	
-	return frequency;
+	for (d of data) {
+		var entry = histo.find(e => e.Name === d);
+		if (!entry) {
+			entry = {Name: d, Count: 0};
+			histo.push(entry);
+		}
+
+		entry.Count++;
+	}
+	
+	histo.sort((a,b) => {
+		return b.Count-a.Count;
+	});
+	
+	return histo;
+}
+
+function extractProductFrequency(callback) {
+	const products = [];
+	
+	fs.createReadStream(productsPath)
+		.pipe(parse({separator: ';', headers: ['Timestamp','Operation','Name','Amount','Unit']}))
+		.on('data', (data) => {
+			if (data.Operation=='ADD')
+				products.push(data.Name);
+		})
+		.on('end', () => {
+			console.log("Products:");
+			console.log(products);
+			console.log("Histogram:");
+			var frequency = buildHistogram(products);
+			console.log(frequency);
+			callback(frequency);
+		});
 }
 
 function addToList(newItem) {
@@ -180,7 +205,7 @@ function writeList()
 
 function makeSafeForCSV(val) {
 	if (val.indexOf(';') >= 0)
-		return "'" + val + "'";
+		return '"' + val + '"';
 	else
 		return val;
 }
