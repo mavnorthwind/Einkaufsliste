@@ -3,6 +3,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const uuid = require('node-uuid');
 const path = require('path');
+const parse = require('csv-parse');
 
 var app = express();
 
@@ -19,6 +20,7 @@ var listPath = path.resolve(__dirname, 'liste.json');
 var list = getList();
 
 var suggestionPath = path.resolve(__dirname, 'suggestion.json');
+var productsPath = path.resolve(__dirname, 'products.csv');
 
 updateSuggestion(); // update once at startup
 setInterval(updateSuggestion, 1000*60*60*24); // and update suggestions once a day

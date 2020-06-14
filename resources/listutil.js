@@ -90,7 +90,6 @@
 			};
 			sel.innerHTML = items;
 		});
-		
 	}
 	
 	function getProduct() {
