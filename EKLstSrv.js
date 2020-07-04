@@ -1,3 +1,5 @@
+'require strict';
+
 const fs = require('fs');
 const express = require('express');
 const bodyParser = require('body-parser');
@@ -38,18 +40,34 @@ function getList() {
 		delete require.cache[require.resolve(listPath)];
 		list = require(listPath);
 	}
-	
+
 	return list;
 }
 
-function getSuggestion() {
+function getSuggestion(max, sort, min) {
 	var sug = [];
+
+	min = min || 2; // items have to occur twice at least to be added
 
 	if (fs.existsSync(suggestionPath)) {
 		delete require.cache[require.resolve(suggestionPath)];
 		sug = require(suggestionPath);
 	}
-	
+
+	sug = sug.filter(item => item.Count>=min);
+
+	if (!sort || sort === 'alpha')
+	{
+		sug.sort((a,b) => a.Name.localeCompare(b.Name));
+	}
+	if (sort === 'count')
+	{
+		sug.sort((a,b) => b.Count-a.Count);
+	}
+
+	if (max && max > 1)
+		sug.splice(max);
+
 	return sug;
 }
 
@@ -63,7 +81,7 @@ function updateSuggestion() {
 
 function buildHistogram(data) {
 	var histo = [];
-	
+
 	for (d of data) {
 		var entry = histo.find(e => e.Name === d);
 		if (!entry) {
@@ -73,17 +91,13 @@ function buildHistogram(data) {
 
 		entry.Count++;
 	}
-	
-	histo.sort((a,b) => {
-		return b.Count-a.Count;
-	});
-	
+
 	return histo;
 }
 
 function extractProductFrequency(callback) {
 	const products = [];
-	
+
 	fs.createReadStream(productsPath)
 		.pipe(parse({separator: ';', headers: ['Timestamp','Operation','Name','Amount','Unit']}))
 		.on('data', (data) => {
@@ -105,7 +119,7 @@ function addToList(newItem) {
 		return;
 
 	list.AddTimestamp = new Date().valueOf();
-	
+
 	newItem.Product = newItem.Product.trim();
 	var amount = parseInt(newItem.Amount);
 	if (isNaN(amount))
@@ -113,7 +127,7 @@ function addToList(newItem) {
 	else
 		if (newItem.Unit == null || newItem.Unit == undefined)
 			newItem.Unit = "St.";
-	
+
 	for (var i = 0; i < list.Items.length; i++) {
 		var p = list.Items[i];
 		if (p.Product.toUpperCase() == newItem.Product.toUpperCase()) {
@@ -121,7 +135,7 @@ function addToList(newItem) {
 				var oldAmount = parseInt(p.Amount, 10);
 				if (isNaN(oldAmount))
 					p.Amount = 0;
-				
+
 				p.Amount = oldAmount + amount;
 				console.log(amount + " added to " + p.Product);
 			}
@@ -131,16 +145,10 @@ function addToList(newItem) {
 
 	newItem.ID = uuid.v4();
 	list.Items.push(newItem);
-	list.Items.sort(function (a, b) {
-		var p1 = a.Product.toUpperCase();
-		var p2 = b.Product.toUpperCase();
-		if (p1 > p2) return 1;
-		if (p2 > p1) return -1;
-		return 0;
-	});
-	
+	list.Items.sort((a, b) => a.Product.localeCompare(b.Product));
+
 	logItemAdd(newItem);
-	
+
 	console.log(newItem.Product + " added to list");
 };
 
@@ -209,14 +217,17 @@ function makeSafeForCSV(val) {
 	else
 		return val;
 }
+
 function getProductLogPath() {
 	return path.resolve(__dirname, 'products.csv');
 }
+
 function formatItemForLog(item) {
 	var prod = makeSafeForCSV(item.Product);
-	
+
 	return prod + ';' + (item.Amount || "") + ';' + (item.Unit || "");
 }
+
 function logItemAdd(item) {
 	fs.appendFileSync(getProductLogPath(), new Date().toJSON() + ';ADD;' + formatItemForLog(item) + '\n');
 }
@@ -239,7 +250,7 @@ app.get('/edit', function(req, res){
 		}
 	};
 	var fileName = "EditList.html";
-	
+
 	res.sendFile(fileName, options, function (err) {
 		if (err) {
 			console.log(err);
@@ -256,7 +267,7 @@ app.get('/resources/:file', function(req, res){
 });
 
 app.get('/suggestion' , function(req, res){
-	res.end(JSON.stringify(getSuggestion()));
+	res.end(JSON.stringify(getSuggestion(req.query.max, req.query.sort, req.query.min)));
 });
 
 app.post('/', function (req, res) {
@@ -302,4 +313,3 @@ var server = app.listen(8081, function () {
 
 	console.log(list);
 });
-
