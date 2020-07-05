@@ -13,7 +13,7 @@ var app = express();
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-let whitelist = ['http://localhost:8081', 'http://pi3:8081'];
+let whitelist = ['http://localhost:8081', 'http://pi3:8081', 'http://mavnet.selfhost.eu:8081'];
 app.use(cors({
 	origin: function(origin, callback) {
 		if (!origin || whitelist.indexOf(origin) >= 0) {
