@@ -57,9 +57,14 @@ function getList() {
 		DeleteTimestamp: 0
 		};
 
-	if (fs.existsSync(listPath)) {
-		delete require.cache[require.resolve(listPath)];
-		list = require(listPath);
+	try {
+		if (fs.existsSync(listPath)) {
+			delete require.cache[require.resolve(listPath)];
+			list = require(listPath);
+		}
+	} catch (ex)
+	{
+		console.error("Exception reading list: " + ex);
 	}
 
 	return list;

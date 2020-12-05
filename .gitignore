@@ -1,0 +1,6 @@
+node_modules/
+package-lock.json
+products.csv
+suggestion.json
+whitelist.json
+liste.json
