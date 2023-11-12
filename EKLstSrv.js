@@ -97,6 +97,21 @@ function getSuggestion(max, sort, min) {
 	return sug;
 }
 
+function getLuisProducts(count) {
+	var sug = getSuggestion(count, "count");
+
+	
+	var products = "{";
+	for (var p of sug) {
+		products = products + "\"" + p.Name + "\":[],";
+	};
+	products = products.slice(0,-1); // strip last comma
+	products = products+"}";
+	
+	
+	return JSON.parse(products);
+}
+
 function writeSuggestion(sug) {
 	fs.writeFileSync(suggestionPath, JSON.stringify(sug));
 }
@@ -140,6 +155,44 @@ function extractProductFrequency(callback) {
 		});
 }
 
+function parseAmount(input) {
+  if (input == undefined) {
+    return { Amount: undefined, Unit: undefined };
+  }
+
+  // Regular expression to match numeric amount and optional string unit
+  const regex = /^(\d+)([a-zA-Z]+)?$/;
+
+  // Use the regular expression to extract matches
+  const matches = input.match(regex);
+
+  if (!matches) {
+    return { Amount: undefined, Unit: undefined };
+  }
+
+  // Extract the numeric amount and optional string unit
+  const amount = parseInt(matches[1], 10);
+  const unit = matches[2] || null;
+
+  // Create and return the object
+  const result = { Amount: amount, Unit: undefined };
+
+  if (unit) {
+    result.Unit = unit;
+  }
+
+  return result;
+}
+
+function AddProductToExisting(newProduct, existingProduct) {
+	if (existingProduct.Unit == newProduct.Unit) {
+		existingProduct.Amount += newProduct.Amount;
+	} else {
+		existingProduct.Unit = newProduct.Unit;
+		existingProduct.Amount = newProduct.Amount;
+	}
+}
+
 function addToList(newItem) {
 	if (newItem.Product == null)
 		return;
@@ -147,24 +200,19 @@ function addToList(newItem) {
 	list.AddTimestamp = new Date().valueOf();
 
 	newItem.Product = newItem.Product.trim();
-	var amount = parseInt(newItem.Amount);
-	if (isNaN(amount))
-		newItem.Unit = undefined;
-	else
-		if (newItem.Unit == null || newItem.Unit == undefined)
-			newItem.Unit = "St.";
+	
+	var amount = parseAmount(newItem.Amount);
+
+	if (amount.Unit == undefined && !isNaN(amount.Amount))
+		amount.Unit = "St.";
+	
+	newItem.Amount = amount.Amount;
+	newItem.Unit = amount.Unit;
 
 	for (var i = 0; i < list.Items.length; i++) {
 		var p = list.Items[i];
 		if (p.Product.toUpperCase() == newItem.Product.toUpperCase()) {
-			if (!isNaN(amount)) {
-				var oldAmount = parseInt(p.Amount, 10);
-				if (isNaN(oldAmount))
-					p.Amount = 0;
-
-				p.Amount = oldAmount + amount;
-				console.log(amount + " added to " + p.Product);
-			}
+			AddProductToExisting(newItem, p);
 			return;
 		}
 	}
@@ -290,6 +338,10 @@ app.get('/edit', function(req, res){
 
 app.get('/resources/:file', function(req, res){
 	sendFile(req.params.file, '/resources/', req, res);
+});
+
+app.get('/luisproducts' , function(req, res){
+	res.end(JSON.stringify(getLuisProducts(req.query.count)));
 });
 
 app.get('/suggestion' , function(req, res){
