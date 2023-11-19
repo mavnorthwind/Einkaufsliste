@@ -92,56 +92,64 @@
 		});
 	}
 	
-	function getProduct() {
-		var res = new Object();
-		res.Amount = undefined;
+	// Das soll der Server machen!
+	// function getProduct() {
+		// var res = new Object();
+		// res.Amount = undefined;
 
-		var prod = document.getElementById('product').value;
-		if (!prod || prod.trim().length == 0)
-			return null;
+		// var prod = document.getElementById('product').value;
+		// if (!prod || prod.trim().length == 0)
+			// return null;
 
-		// Mögliche Kombinationen:
-		// Wurst
-		// 10 Eier
-		// Eier 10
-		// Eier 10St.
-		// 500g Nudeln
-		// Gemischtes Gulasch 1kg
-		var re = new RegExp("\\s+");
-		//var re = new RegExp("([0-9]+\\S*)");
-		var reUnit = new RegExp("[0-9]+(\\S*)");
-		var parts = prod.split(re);
-		var product = "";
-		var hasUnit = false;
+		// // Mögliche Kombinationen:
+		// // Wurst
+		// // 10 Eier
+		// // Eier 10
+		// // Eier 10St.
+		// // 500g Nudeln
+		// // Gemischtes Gulasch 1kg
+		// var re = new RegExp("\\s+");
+		// //var re = new RegExp("([0-9]+\\S*)");
+		// var reUnit = new RegExp("[0-9]+(\\S*)");
+		// var parts = prod.split(re);
+		// var product = "";
+		// var hasUnit = false;
 
-		for (var i = 0; i < parts.length; i++) {
-			var amount = parseInt(parts[i], 10);
-			if (isNaN(amount) || hasUnit) {
-				product += parts[i] + " ";
-			} else {
-				res.Amount = amount;
+		// for (var i = 0; i < parts.length; i++) {
+			// var amount = parseInt(parts[i], 10);
+			// if (isNaN(amount) || hasUnit) {
+				// product += parts[i] + " ";
+			// } else {
+				// res.Amount = amount;
 
-				var unitMatch = parts[i].match(reUnit);
-				if (unitMatch[1] != '')
-					res.Unit = unitMatch[1];
+				// var unitMatch = parts[i].match(reUnit);
+				// if (unitMatch[1] != '')
+					// res.Unit = unitMatch[1];
 				
-				hasUnit = true;
-			}
-		}
+				// hasUnit = true;
+			// }
+		// }
 
-		res.Product = product.trim();
+		// res.Product = product.trim();
 
-		return res;
-	}
+		// return res;
+	// }
 
 	function addItem() {
-		var item = getProduct();
-		if (item == null)
-			return;
+		// var item = getProduct();
+		// if (item == null)
+			// return;
 
-		sendRequest("POST", null, item, (r) => {
-			updateList(r);
-		});
+		var input = document.getElementById('product').value.trim();
+		if (input)
+		{
+			var item = {"ProductString": JSON.stringify(input)};
+			
+			sendRequest("POST", null, item, (r) => {
+				updateList(r);
+			});
+		}
+		
 		document.getElementById("product").value = "";
 	}
 

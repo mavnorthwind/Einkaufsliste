@@ -139,6 +139,12 @@ function buildHistogram(data) {
 function extractProductFrequency(callback) {
 	const products = [];
 
+	if (!fs.existsSync(productsPath))
+	{
+		callback(products);
+		return;
+	}
+
 	fs.createReadStream(productsPath)
 		.pipe(parse({separator: ';', headers: ['Timestamp','Operation','Name','Amount','Unit']}))
 		.on('data', (data) => {
@@ -156,12 +162,13 @@ function extractProductFrequency(callback) {
 }
 
 function parseAmount(input) {
+  input = input || undefined;
   if (input == undefined) {
     return { Amount: undefined, Unit: undefined };
   }
 
   // Regular expression to match numeric amount and optional string unit
-  const regex = /^(\d+)([a-zA-Z]+)?$/;
+  const regex = /^([.,0123456789]+)([a-zA-Z]+)?$/;
 
   // Use the regular expression to extract matches
   const matches = input.match(regex);
@@ -170,22 +177,21 @@ function parseAmount(input) {
     return { Amount: undefined, Unit: undefined };
   }
 
+  if (matches[1])
+	  matches[1] = matches[1].replace(",","."); // allow for 3,5kg or 3.5kg
   // Extract the numeric amount and optional string unit
-  const amount = parseInt(matches[1], 10);
-  const unit = matches[2] || null;
+  const amount = parseFloat(matches[1], 10);
 
   // Create and return the object
-  const result = { Amount: amount, Unit: undefined };
-
-  if (unit) {
-    result.Unit = unit;
-  }
+  const result = { Amount: amount, Unit: matches[2] || undefined };
 
   return result;
 }
 
 function AddProductToExisting(newProduct, existingProduct) {
-	if (existingProduct.Unit == newProduct.Unit) {
+	if (existingProduct.Unit == newProduct.Unit &&
+		!isNaN(existingProduct.Amount) &&
+		!isNaN(newProduct.Amount)) {
 		existingProduct.Amount += newProduct.Amount;
 	} else {
 		existingProduct.Unit = newProduct.Unit;
@@ -193,21 +199,47 @@ function AddProductToExisting(newProduct, existingProduct) {
 	}
 }
 
-function addToList(newItem) {
-	if (newItem.Product == null)
+function ParseNewProduct(input) {
+	var re = new RegExp("\\s+");
+	var reAmountAndUnit = new RegExp("([.,0-9]+)(\\S*)");
+	var parts = input.split(re);
+	
+	var product = "";
+	var amount = undefined;
+	var unit = undefined;
+
+	for (var i = 0; i < parts.length; i++) {
+		var amountMatches = parts[i].match(reAmountAndUnit);
+		if (amountMatches && unit == undefined) {
+			amountMatches[1] = amountMatches[1].replace(",","."); // allow for 3.5 or 3,5
+			amount = parseFloat(amountMatches[1]);
+			if (amountMatches[2] != '')
+				unit = amountMatches[2];
+		}
+		else
+		{
+			product += parts[i] + " ";
+		}
+	}
+
+	product = product.trim();
+
+	return 	{
+		Product: product,
+		Amount: amount,
+		Unit: (unit == undefined && amount != undefined) ? "St." : unit
+	};
+}
+
+function addToList(input) {
+	console.log("addToList("+input+")");
+	
+	newItem = ParseNewProduct(input)
+	
+	if (newItem == null || newItem.Product == null)
 		return;
 
 	list.AddTimestamp = new Date().valueOf();
-
-	newItem.Product = newItem.Product.trim();
-	
-	var amount = parseAmount(newItem.Amount);
-
-	if (amount.Unit == undefined && !isNaN(amount.Amount))
-		amount.Unit = "St.";
-	
-	newItem.Amount = amount.Amount;
-	newItem.Unit = amount.Unit;
 
 	for (var i = 0; i < list.Items.length; i++) {
 		var p = list.Items[i];
@@ -349,9 +381,9 @@ app.get('/suggestion' , function(req, res){
 });
 
 app.post('/', function (req, res) {
-	console.log("ADD PRODUCT: " + JSON.stringify(req.body));
-	product = req.body;
-	addToList(product);
+	console.log("ADD PRODUCT: " + req.body);
+	input = req.body;
+	addToList(JSON.parse(input.ProductString));
 	writeList();
 	res.end(JSON.stringify(list));
 });
