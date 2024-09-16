@@ -168,7 +168,7 @@ function parseAmount(input) {
   }
 
   // Regular expression to match numeric amount and optional string unit
-  const regex = /^([.,0123456789]+)([a-zA-Z]+)?$/;
+  const regex = /^([.,0-9]+)(\\S*)?$/;
 
   // Use the regular expression to extract matches
   const matches = input.match(regex);
@@ -201,7 +201,7 @@ function AddProductToExisting(newProduct, existingProduct) {
 
 function ParseNewProduct(input) {
 	var re = new RegExp("\\s+");
-	var reAmountAndUnit = new RegExp("([.,0-9]+)(\\S*)");
+	var reAmountAndUnit = new RegExp("^([.,0-9]+)(\\S*)$");
 	var parts = input.split(re);
 	
 	var product = "";
