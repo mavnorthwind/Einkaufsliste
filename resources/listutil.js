@@ -163,7 +163,7 @@
 
 	function sendRequest(verb, path, body, onCompleteCallback) {
 		var http = new XMLHttpRequest();
-		var url = "http://"+window.location.hostname+":8081/";
+		var url = "/"; // don't use hardcoded protocol/url/port; request with existing parameters 
 		if (path)
 			url += path;
 			

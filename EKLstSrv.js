@@ -1,6 +1,7 @@
 'require strict';
 
 const fs = require('fs');
+const https = require('https');
 const express = require('express');
 const bodyParser = require('body-parser');
 const uuid = require('node-uuid');
@@ -152,11 +153,13 @@ function extractProductFrequency(callback) {
 				products.push(data.Name);
 		})
 		.on('end', () => {
-			console.log("Products:");
-			console.log(products);
-			console.log("Histogram:");
+//			console.log("Products:");
+//			console.log(products);
+//			console.log("Histogram:");
+			console.log("Building product histogram...");
 			var frequency = buildHistogram(products);
-			console.log(frequency);
+			console.log("Done");
+//			console.log(frequency);
 			callback(frequency);
 		});
 }
@@ -415,11 +418,41 @@ app.delete('/product/name/:product', function (req, res) {
 	res.end(JSON.stringify(list));
 });
 
-var server = app.listen(8081, function () {
+///////////////// Server ///////////////////////
+
+// Load SSL/TLS certificates
+const domain = "mavnet.selfhost.eu";
+
+const sslOptions = {
+  key: fs.readFileSync(`/etc/letsencrypt/live/${domain}/privkey.pem`),
+  cert: fs.readFileSync(`/etc/letsencrypt/live/${domain}/cert.pem`),
+  ca: fs.readFileSync(`/etc/letsencrypt/live/${domain}/chain.pem`),
+};
+
+// HTTPS server on port 8081
+var secureServer = https.createServer(sslOptions, app).listen(8081, () => {
+	var host = secureServer.address().address
+	var port = secureServer.address().port
+
+	console.log("Einkaufslisten-Server auf https://%s:%s", host, port)
+
+//	console.log(list);
+});
+
+// Optionally continue serving HTTP on port 8080 (for redirection purposes)
+var server = app.listen(8080, function () {
 	var host = server.address().address
 	var port = server.address().port
 
 	console.log("Einkaufslisten-Server auf http://%s:%s", host, port)
 
-	console.log(list);
+//	console.log(list);
 });
+
+//app.use((req, res, next) => {
+//	if (!req.secure) {
+//		res.redirect(`https://${req.headers.host.replace(':8080', ':8081')}${req.url}`);
+//	}
+//	next();
+//});
+
