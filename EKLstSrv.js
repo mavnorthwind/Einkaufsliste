@@ -8,6 +8,7 @@ const uuid = require('node-uuid');
 const path = require('path');
 const parse = require('csv-parser');
 const cors = require('cors');
+const url = require('url');
 
 var app = express();
 
@@ -21,24 +22,29 @@ if (fs.existsSync(whitelistpath)) {
 }
 
 app.use(cors({
-	origin: function(origin, callback) {
-		if (!origin || !whitelist || whitelist.indexOf(origin) >= 0) {
-			return callback(null, true);
-		}
-		var message = "The CORS policy for this origin (" +
-				origin +
-				")  doesn't " +
-				"allow access from that origin.";
-		return callback(new Error(message), false);
-	}
+    origin: function(origin, callback) {
+        // If there's no origin (e.g., during local development or non-browser requests), allow the request
+        if (!origin) {
+            return callback(null, true);
+        }
+
+	// Normalize the origin to only include protocol and host (ignoring the port, even non-standard ones)
+        const parsedOrigin = new URL(origin);
+        const normalizedOrigin = `${parsedOrigin.protocol}//${parsedOrigin.hostname}`;
+
+        // Check if the normalized origin is in the whitelist
+        if (!whitelist || whitelist.indexOf(normalizedOrigin) >= 0) {
+            return callback(null, true);
+        }
+
+        const message = "The CORS policy for this origin (" +
+                        normalizedOrigin +
+                        ") doesn't " +
+                        "allow access from that origin.";
+        return callback(new Error(message), false);
+    }
 }));
 
-//app.use(function (req, res, next) {
-//	res.header("Access-Control-Allow-Origin", "*");
-//	res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
-//	res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE");
-//	next();
-//});
 
 var listPath = path.resolve(__dirname, 'liste.json');
 var list = getList();
